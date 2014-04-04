@@ -1,0 +1,31 @@
+       Languages for statistical computing: present and future
+
+			    Douglas Bates
+		       Department of Statistics
+		  University of Wisconsin - Madison
+				  
+R (and its predecessor, S) have had an enormous impact on statistical
+practice and even, to some extent, on theory.  Those of us involved in
+the original development of R did not foresee anything close to its
+current popularity.  R can be used interactively, has an enormous
+number of user-contributed packages, provides for high-level
+programming and now has an entire ecosystem of tools like RStudio
+available for users.  However, there are inherent difficulties in
+using R itself as a programming language for complex algorithms
+applied to large data sets.  This problem has been attacked in many
+different ways including switching to other languages like python or
+Matlab, developing other languages like JAGS or Stan that can inteface
+with R, or allowing "seamless" integration of compiled code with R
+through Rcpp.  Recently I have been developing in an Open-Source
+language called Julia (www.julialang.org) that is similar in structure
+to R (functions, generic functions, self-describing objects) but very
+different under the hood.  It uses the "Just In Time" or JIT compiler
+capabilities of the LLVM project (llvm.org) to compile functions and
+methods.  The result is code that can be amazingly fast while still
+having the dynamic properties we associate with R.  Julia is early in
+its development and does not yet have the ecosystem that has been
+built for R over the past 20 (40 if you count earlier development on
+S) years.  Even so, I am convinced it will become the language of
+choice over the next several years.
+
+

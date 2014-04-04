@@ -1,0 +1,40 @@
+Languages for statistical computing: present and future
+========================================================
+author: Douglas Bates
+date: April 9, 2014
+
+Today it's an R world
+========================================================
+
+- The `S` language was created at Bell Labs in the 1980's
+- `R` was created at U. of Auckland in mid 1990's
+- It's authors, Ross and Robert, described it as "not unlike `S`"
+- `R` was released as Open Source software in 1995
+- CRAN was formed shortly thereafter
+- Both these decisions allowed for contributions from around the world
+- The power of "crowd sourcing" is known now but not so much then
+
+Popularity of R is amazing
+========================================================
+- Ross once said they expected maybe 100 people would ever use `R`
+- That was an underestimate
+- An entire ecosystem is available for users
+    - CRAN
+    - books, online notes, courses, user's groups, ...
+    - commercial support: Revolution, RStudio, ...
+- RStudio in particular provides `ggplot2`, `knitr`, `rmarkdown`, `devtools`, [Rpubs](http://rpubs.com), etc. in addition to the RStudio IDE.
+
+Advantages of R
+========================================================
+- Brilliant design.  John Chambers received the ACM Software Systems award for S.
+- Interactive (i.e. a Read-Eval-Print-Loop or REPL)
+- Self-describing data structures
+- Code expressed as functions.  Allows for generic functions and methods.
+- Packages, namespaces and all that good stuff
+- A dynamic language (objects have types, names don't)
+- Interfaces to code written in compiled languages
+- Documentation is emphasized, especially in packages
+
+Why consider other languages?
+========================================================
+- `R` is an old friend. 
