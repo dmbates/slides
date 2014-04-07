@@ -1,0 +1,381 @@
+---
+title: "Languages for statistical computing: present and future"
+author: Douglas Bates
+date: April 9, 2014
+output: 
+  ioslides_presentation:
+    incremental: true
+---
+```{r preliminaries,cache=FALSE,echo=FALSE,include=FALSE}
+library(lattice)
+library(knitr)
+```
+
+# R, which revolutionized statistical computing
+
+## Today it's an R world
+
+- The `S` language was created at Bell Labs in the 1980's
+- `R` was created at U. of Auckland in mid 1990's
+- Its authors, Ross and Robert, described it as "not unlike `S`"
+    - That is, the syntax and semantics follow those of `S`
+- `R` was released as Open Source software in 1995
+- `CRAN` was formed shortly thereafter
+    - Both these decisions allowed for contributions from around the world
+    - The power of "crowd sourcing" is known now but not so much then
+
+## Popularity of R is amazing
+- Ross once said they expected maybe 100 people would ever use `R`
+    - That was an underestimate.
+- An entire ecosystem is available for users
+    - `CRAN`
+    - books, online notes, courses, user groups, ...
+    - commercial support: Rstudio, Revolution Analytics, ...
+- [RStudio](http://rstudio.com) in particular provides `ggplot2`, `knitr`, `rmarkdown`, `devtools`, `shiny`, [Rpubs](http://rpubs.com), etc. in addition to the RStudio IDE.
+
+## Advantages of R
+- Brilliant design.  
+    - John Chambers received the ACM Software Systems Award for `S`.
+- Interactive (i.e. a Read-Eval-Print-Loop or REPL)
+- Self-describing data structures
+    - dynamic language (objects have types, names don't)
+- Calculations expressed as functions.  
+    - Allows for generic functions and methods.
+- Packages, namespaces and all that good stuff
+    - package structure emphasizes documentation
+- Provides interfaces to code written in compiled languages
+    - `.C` and `.Fortran` from the start. Later `.Call`
+    - more recently [Rcpp](http://github.com/RcppCore/Rcpp) et al. provide less awkward interfaces to `C++`
+    
+## Why consider other languages?
+- `R` is an old friend.
+- It's a friend because it is familiar and does lots of nice things for you.
+- It's old because the original design dates back to the 1980's.
+    - Also, R-Core has not changed in over a decade.  
+    - Most R-Core members are at or nearing retirement.
+    - Only a few are active in development.
+    - Innovative development is mostly taking place outside R-Core.
+    - Even the CRAN design is rather out-of-date
+
+## Carrying the burden of the past
+
+- `S` was designed as an interface language.
+    - originally a wrapper around `Fortran` libraries for graphics and numerical computing
+    - early versions ("S2") had a language for macros
+    - by "S3" the macro language was replaced by functions
+    - always assumed that "compute intensive" parts are in `C`, `Fortran`, etc.
+- Early design decisions reverberate even today
+    - "Lazy evaluation" makes compilation difficult
+    - "Functional semantics" - a function should not change the value of an argument
+    - There are no scalars, only vectors of length 1
+    - Interpretation overhead makes looping slow
+
+## Compute-intensive methods, MCMC
+
+- Consider a task like Markov Chain Monte Carlo (MCMC).
+    - Highly iterative
+    - Each iteration updates a (potentially large) data structure
+
+- In a pure `R` implementation
+    - you end up copying the entire structure at each iteration
+    - you pay the interpretation overhead at each iteration
+    - performance is too slow - need to go to compiled code
+         - even then you must "live outside the law" (i.e. update arguments) to make it feasible
+         
+- Most popular solution is to create another language (`BUGS`, [JAGS](http://mcmc-jags.sourceforge.net), [Stan](mc-stan.org)) with an `R` interface (`rjags`,`rstan`)
+
+## [lme4](http://github.com/lme4/lme4): complex models & large data sets
+
+- package for fitting fitting LMMs (linear mixed-effects models), GLMMs (generalized linear mixed models) and NLMMs
+- widely used models, often applied to very large data sets
+- must update, not copy, model structures when iterating to parameter estimates
+    - can use environments, reference classes, etc.
+        - there are lots of "gotcha"s when doing so
+    - code becomes opaque
+        - without exotic structures can't fit to large data sets
+        - for small data sets, better off avoiding them
+- for sanity use C++ templated libraries (`Rcpp` and `Eigen`)
+    - trying to understand the innards of these libraries makes you crazy
+    - the package becomes a "black box"" to others
+    - difficult to maintain and to update
+
+# Looking to other languages
+
+## Matlab, Python, etc.
+
+- Matlab is widely used in numerical analysis and engineering
+    - proprietary and expensive
+    - original design from early 1980's, since revamped
+    - not a particularly easy language to extend
+- Many in Bioinformatics and Machine-Learning use [Python](http://python.org)
+    - interactive, general-purpose
+    - object-oriented in the `C++`/`Java` tradition
+    - fast by standards of interactive languages.  Other projects like [Cython](http://cython.org) make it even faster.
+    - lots of extensions
+        - numerical methods, [numpy](http://numpy.org), and data analysis, [pandas](http://pandas/pydata.org), are extensions
+
+## Introducing [Julia](http://www.julialang.org)
+
+- A dynamic language for technical computing using [JIT](http://en.wikipedia.org/wiki/Just-in-time_compilation) compilation from [LLVM](http://llvm.org)
+- All functions are generic using [multiple dispatch](http://en.wikipedia.org/wiki/Multiple_dispatch)
+- Wide range of data types
+    - user-defined data types are encouraged
+- Active, amazingly-talented and friendly developer community
+- Leverages current web-centric tools
+    - all development takes place on [github](http://github.com)
+    - issue trackers, discussions and mailing lists are easy to access
+    - a Julia package is a [git](http://en.wikipedia.org/wiki/Git_(software)) repository, usually on [github](http://github.com)
+    - often Julia packages are maintained by special-interest groups like [JuliaStats](http://github.com/JuliaStats) or [JuliaOpt](http://github.com/JuliaOpt)
+- Syntax like that of `R`, `Matlab/Octave`, `JavaScript` but with its own idiosyncracies
+
+# Permutation tests, a simple task for comparison
+
+## The cat treats example
+```{r treatdata}
+treats <- c(4,3,5,0,5,4,5,6,1,7,6,3,7,1,3,6,3,5,1,2)
+tuna <- c(2,3,4,6,10,12,14,17,19,20)
+sum(treats[tuna])
+```
+- A permutation test is a type of [randomization test](http://en.wikipedia.org/wiki/Randomization_test) where the observed value of the test statistic is compared to the population of all possible values under rearrangement of labels. 
+
+- The sample data shown above are described [here](http://rpubs.com/dmbates/15250)
+
+- To compare means we can simple compare this sum to the sums of all possible subsets of size 10.
+
+- It is not easy to enumerate all the subsets.  Instead we will create a sample of such sums for comparison.
+
+## Sample of sums of treats in `R`
+
+```{r replicate,cache=TRUE}
+set.seed(1234321)
+system.time(samp <- replicate(100000L,sum(sample(treats,10L))))
+```
+
+```{r densityplot,echo=FALSE,fig.height=3.5}
+br <- seq(min(samp)-0.5,max(samp)+0.5,by=1.0)
+histogram(~samp, xlab="Sums of samples of size 10 from the treats data",
+        breaks=br)
+```
+
+## Observed p-value
+
+```{r pvalue}
+sum(samp <= 29)/length(samp)
+samp1 <- replicate(100000L,sum(sample(treats,10L)))
+sum(samp1 <= 29)/length(samp)
+```
+- Every time we generate a new sample we get a slightly different _p-value_
+
+## Generating a sample in `Julia`
+
+```{.julia}
+julia> using StatsBase
+
+julia> treats = [4,3,5,0,5,4,5,6,1,7,6,3,7,1,3,6,3,5,1,2];
+
+julia> srand(1234321)    # set the random number generator seed
+
+julia> @time samp = [sum(sample(treats,10;replace=false))
+                         for i in 1:100000];
+elapsed time: 0.201406766 seconds (52791888 bytes allocated)
+
+julia> sum(samp .<= 29)/length(samp)
+0.02722
+```
+- A cautionary tale:
+    - My first version was wrong but I didn't discover this until I calculated the _p-value_
+    - In `Julia` the default in `sample` is `replace=true`. In `R` it is `FALSE`.
+
+## A `Julia` sample generating function
+
+```{.julia}
+julia> sampsums(v::Vector,k,N) = 
+          [sum(sample(treats,10;replace=false)) for i in 1:N]
+sampsums (generic function with 1 method)
+
+julia> srand(1234321)
+
+julia> samp = sampsums(treats,10,100000);
+
+julia> @time sampsums(treats,10,100000);
+elapsed time: 0.211285686 seconds (52791920 bytes allocated)
+
+julia> countnz(samp .<= 29)/length(samp)
+0.02722
+```
+- A vector of length 10 is allocated for each sample
+- Often `Julia` functions have a "mutating" version, whose name ends in `!`, that is called by the "non-mutating" version.
+
+## Revised sample generating function
+```{.julia}
+julia> function sampsums(v::Vector,k,N)
+           a = similar(v,k)
+           [sum(StatsBase.sample!(treats,a;replace=false))
+               for i in 1:N]
+       end
+sampsums (generic function with 1 method)
+
+julia> srand(1234321)
+
+julia> samp = sampsums(treats,10,100000);
+
+julia> countnz(samp .<= 29)/length(samp)
+0.02722
+
+julia> @time sampsums(treats,10,100000);
+elapsed time: 0.139770793 seconds (30400224 bytes allocated)
+```
+- Only 1 vector of size 10 is allocated then re-used in the call to `StatsBase.sample!`.
+
+## Enumerating all possible subsets
+```{.julia}
+julia> enumsums(v::Vector,k) = [sum(c) for c in combinations(v,10)]
+enumsums (generic function with 1 method)
+
+julia> esums = enumsums(treats,10);
+
+julia> length(esums)
+184756
+
+julia> countnz(esums .<= 29)/length(esums)
+0.027208859252202906
+
+julia> @time enumsums(treats,10);
+elapsed time: 0.130567879 seconds (54688024 bytes allocated)
+```
+- `combinations(v,10)` produces an [iterator](http://en.wikipedia.org/wiki/Iterator) for all possible combinations
+- in `Julia` a `for` statement can be over a vector, range or any other type of iterator.
+
+## Details of the iterator
+```{.julia}
+immutable Combinations{T}
+    a::T
+    t::Int
+end
+
+length(c::Combinations) = binomial(length(c.a),c.t)
+start(c::Combinations) = [1:c.t]
+done(c::Combinations, s) = 
+    !isempty(s) && s[1] > length(c.a)-c.t+1
+
+function combinations(a, t::Integer)
+    if t < 0 # generate 0 combinations for negative argument
+        t = length(a)+1
+    end
+    Combinations(a, t)
+end
+```
+## Details of the iterator (cont'd)
+```{.julia}
+function next(c::Combinations, s)
+    comb = c.a[s]
+    ## special case to generate 1 result for t==0
+    c.t == 0 && return (comb,[length(c.a)+2])
+    s = copy(s)
+    for i = length(s):-1:1
+        s[i] += 1
+        if s[i] > (length(c.a) - (length(s)-i))
+            continue
+        end
+        for j = i+1:endof(s)
+            s[j] = s[j-1]+1
+        end
+        break
+    end
+    (comb,s)
+end
+```
+
+## Seeing how it works
+```{.julia}
+julia> for c in combinations(1:6,3)
+           show(c)
+           println()
+       end
+[1,2,3]
+[1,2,4]
+[1,2,5]
+[1,2,6]
+[1,3,4]
+[1,3,5]
+[1,3,6]
+[1,4,5]
+[1,4,6]
+[1,5,6]
+[2,3,4]
+[2,3,5]
+[2,3,6]
+[2,4,5]
+[2,4,6]
+[2,5,6]
+[3,4,5]
+[3,4,6]
+[3,5,6]
+[4,5,6]
+```
+
+## A permutation test on paired samples
+
+```{r Secchi}
+Secchi <- within(
+    data.frame(d80=c(2.11,1.79,2.71,1.89,1.69,1.71,2.01,1.36,
+                     2.08,1.10,1.29,2.11,2.47,1.67,1.78,
+                     1.68,1.47,1.67,2.31,1.76,1.58,2.55),
+               d90=c(3.67,1.72,3.46,2.60,2.03,2.10,3.01,1.82,
+                     2.64,2.23,1.39,2.08,2.92,1.90,2.44,
+                     2.23,2.43,1.91,3.06,2.26,1.48,2.35)),
+    diff <- d90 - d80)
+str(Secchi)
+```
+- If the population means are equal a negative difference is as likely as a positive difference
+
+## Sample of sums from arbitrary signs
+
+```{r refsamp}
+ns <- 100000L
+system.time(refsamp <- 
+    colSums(Secchi$diff*matrix(c(-1,1)[1+(runif(22*ns)>0.5)],nrow=22)))
+```
+```{r dens,fig.height=3,echo=FALSE}
+densityplot(~refsamp,xlab="Sampled reference distribution of signed sums",plot.points=FALSE,ref=TRUE)
+```
+
+## Julia version using bit pattern
+```{.julia}
+function signedsum(v::Vector, j::Integer)
+    s = zero(eltype(v))
+    for i in 1:length(v)
+        if bool(j & 1)  # low-order bit is a 1
+            s += v[i]   # add v[i] to s
+        else 
+            s -= v[i]   # subtract v[i] from s
+        end
+### <b>
+        j >>= 1         # shift bits right one position
+### </b>
+    end
+    s
+end
+
+ssums(v::Vector) = [signedsum(v,j) for j in 0:2^length(v)-1]
+
+diffs = [1.56,-0.07,0.75,0.71,0.34,0.39,1.00,0.46,0.56,1.13,0.10, 
+        -0.03,0.45,0.23,0.66,0.55,0.96,0.24,0.75,0.5,-0.10,-0.20];
+ss = ssums(diffs);
+```
+
+## Modified version
+```{.julia}
+function signedsum1(v::Vector, j::Integer)
+    s = zero(eltype(v))
+### <b>
+    @inbounds for i in 1:length(v)      # don't check bounds
+        s += bool(j & 1) ? v[i] : -v[i] # ternary operator
+### </b>
+        j >>= 1
+    end
+    s
+end
+
+ssums1(v::Vector) = [signedsum1(v,j) for j in 0:2^length(v) - 1]
+```
