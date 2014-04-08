@@ -9,6 +9,7 @@ output:
 ```{r preliminaries,cache=FALSE,echo=FALSE,include=FALSE}
 library(lattice)
 library(knitr)
+library(lme4)
 ```
 
 # R, which revolutionized statistical computing
@@ -140,7 +141,7 @@ sum(treats[tuna])
 
 - The sample data shown above are described [here](http://rpubs.com/dmbates/15250)
 
-- To compare means we can simple compare this sum to the sums of all possible subsets of size 10.
+- To compare means we can simply compare this sum to the sums of all possible subsets of size 10.
 
 - It is not easy to enumerate all the subsets.  Instead we will create a sample of such sums for comparison.
 
@@ -379,3 +380,141 @@ end
 
 ssums1(v::Vector) = [signedsum1(v,j) for j in 0:2^length(v) - 1]
 ```
+Usage
+```{.julia}
+julia> ssums1(diffs);  # force compilation
+julia> @time ssums1(diffs);
+elapsed time: 0.276065052 seconds (33587072 bytes allocated)
+```
+
+## What does it mean?
+
+- Most statisticians won't need to do this level of "bit-twiddling" in code
+- The point is that you __can__ do this type of low-level programming in `Julia`, if you want to.
+- It would be reasonably easy to write `C/C++` code for this to be called from `R`
+    - you must learn two languages 
+    - you must learn how to interface between the two
+    - this is best done in a package
+        - you need to learn how to create a package
+    - it is not easy to debug and modify code that depends on an interface
+- If you can do it all in one language, it is a big win
+
+    
+# Fitting linear mixed-effects models
+
+## The `InstEval` data from ETH-Zurich {.build}
+
+- These data are from several years of instructor evaluations at ETH-Zurich. 
+    - `y` is the evaluation (larger is better)
+    - `s` is the student id
+    - `d` is the instructor id.
+```{r InstEval}
+str(InstEval)
+```
+
+## Partially crossed random effects
+```{r fm1,cache=TRUE}
+system.time(fm1 <- lmer(y ~ dept*service+(1|s)+(1|d),InstEval,REML=FALSE))
+VarCorr(fm1)
+```
+
+## Fitting LMMs in `Julia`
+```{.julia}
+using DataFrames,MixedModels
+inst = DataFrame(read_rda("./data/InstEval.rda")["InstEval"]);
+fm1 = fit(lmm(y ~ dept*service + (1|s) + (1|d), inst))  # next slide
+@time fit(lmm(y ~ dept*service + (1|s) + (1|d), inst));
+ # elapsed time: 7.170804855 seconds (211949256 bytes allocated)
+```
+
+- In `Julia` the `using` directive attaches a package.
+- The `read_rda` function reads a saved `R` data set.
+- The default criterion for the `lmm` function in the `MixedModels` package is ML.
+- The entire `MixedModels` package is written in `Julia`
+- Libraries of compiled code such as `OpenBLAS`, `LAPACK` and `SuiteSparse` are used but they are part of the base system.
+
+
+## Results of model fit
+```
+Linear mixed model fit by maximum likelihood
+ logLik: -118792.776708, deviance: 237585.553415
+
+ Variance components:
+                Variance    Std.Dev.
+ s              0.105418    0.324681
+ d              0.258416    0.508347
+ Residual       1.384728    1.176745
+ Number of obs: 73421; levels of grouping factors: 2972, 1128
+
+  Fixed-effects parameters:
+        Estimate Std.Error   z value
+ [1]     3.22961  0.064053   50.4209
+ [2]    0.129536  0.101294   1.27882
+ [3]   -0.176751 0.0881352  -2.00545
+ [4]   0.0517102 0.0817524  0.632522
+ [5]   0.0347319  0.085621  0.405647
+ [6]     0.14594 0.0997984   1.46235
+ [7]    0.151689 0.0816897   1.85689
+ [8]    0.104206  0.118751  0.877517
+ [9]   0.0440401 0.0962985  0.457329
+[10]   0.0517546 0.0986029  0.524879
+[11]   0.0466719  0.101942  0.457828
+[12]   0.0563461 0.0977925   0.57618
+[13]   0.0596536  0.100233   0.59515
+[14]  0.00556281  0.110867 0.0501757
+[15]    0.252025 0.0686507   3.67112
+[16]   -0.180757  0.123179  -1.46744
+[17]   0.0186492  0.110017  0.169512
+[18]   -0.282269 0.0792937  -3.55979
+[19]   -0.494464 0.0790278  -6.25683
+[20]   -0.392054  0.110313  -3.55403
+[21]   -0.278547 0.0823727  -3.38154
+[22]   -0.189526  0.111449  -1.70056
+[23]   -0.499868 0.0885423  -5.64553
+[24]   -0.497162 0.0917162  -5.42065
+[25]    -0.24042 0.0982071   -2.4481
+[26]   -0.223013 0.0890548  -2.50422
+[27]   -0.516997 0.0809077  -6.38997
+[28]   -0.384773  0.091843  -4.18946
+```
+
+# Conclusions
+
+## Good points for Julia
+
+- Speed of compiled code in a REPL-based, dynamic language.
+- Sophisticated type system, many inbuilt types
+- All functions are generic with multiple dispatch
+- Built from the ground up for parallel computing
+     - multiple processes local or remote
+     - distributed arrays, shared arrays for local processes
+- Active developers from machine learning, computer vision, optimization, ...
+- Built on the "best of breed" numerical software
+- Access to many storage formats: XML, JSON, YAML, HDF5
+- Package system build on `git`.
+
+## Drawbacks of using Julia
+
+- Another language and system to learn
+    - It's just close enough to `R`, `Matlab/Octave`, etc. to confuse you
+    - yet another set of function names to learn
+- Still in initial rapid growth phase, 0.3.0 to be released "soon"
+- Probably should learn `git`, which can be frustrating
+- Graphics is still somewhat hit-or-miss
+- Documentation
+    - still no standard for package documentation
+    - even the documentation for base system is sketchy
+    - how-to's, online courses, etc. are rudimentary
+    - no books as yet
+
+## Who should adopt early?
+
+- Those who need to do computationally intensive work on large objects
+    - MCMC and similar sampling-based methods
+    - simulation studies
+    - heavy optimization
+- Sophisticated optimization methods are already available
+    - forward and reverse automatic differentiation for Hamiltonian Monte Carlo (HMC) or NUTS samplers
+    - author of NLopt package wrote the Julia interface
+    - ODE, PDE, etc. solvers are a priority
+- Distributions package, NumericExtensions package
