@@ -1,4 +1,4 @@
 slides
 ======
 
-Slides from various presentations
+Slides from presentations I have given.
