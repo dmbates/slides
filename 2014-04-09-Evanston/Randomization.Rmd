@@ -10,7 +10,7 @@ library(lattice)
 
 ## Purpose
 
-In the interests of full disclosure, the purpose of this contribution to [Rpubs](http://rpubs.com) is to present code for a couple of simple tests as implemented in R so they can be compared to [Julia](http://julialang.org) code that I will publish in a gist.
+In the spirit of full disclosure, the purpose of this contribution to [Rpubs](http://rpubs.com) is to present code for a couple of simple tests as implemented in R so they can be compared to [Julia](http://julialang.org) code that I will publish in a gist.
 
 # A randomization test in paired designs
 
