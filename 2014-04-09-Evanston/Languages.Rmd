@@ -11,6 +11,15 @@ library(lattice)
 library(knitr)
 library(lme4)
 ```
+## Web sites
+
+- (http://stat.wisc.edu/~bates/2014-04-09-Evanston.html), these slides
+- (https://github.com/dmbates/slides), git archive of the slides for this and other talks
+- (http://nbviewer.ipython.org/github/dmbates/slides), view the IJulia files
+- (http://rpubs.com/dmbates/15250), Randomization tests in R
+- (http://julialang.org), home page - see the `gsoc` and `juliacon` links
+- (http://docs.julialang.org/en/latest/) documentation for latest version
+- (https://github.com/JuliaStats/Distributions.jl) Distributions package
 
 # R, which revolutionized statistical computing
 
@@ -53,8 +62,8 @@ library(lme4)
 - It's a friend because it is familiar and does lots of nice things for you.
 - It's old because the original design dates back to the 1980's.
     - Also, R-Core has not changed in over a decade.  
-    - Most R-Core members are at or nearing retirement.
-    - Only a few are active in development.
+    - Most R-Core members are mid-career or later.
+    - Only a few are active in development
     - Innovative development is mostly taking place outside R-Core.
     - Even the CRAN design is rather out-of-date
 
@@ -87,7 +96,7 @@ library(lme4)
 
 ## [lme4](http://github.com/lme4/lme4): complex models & large data sets
 
-- package for fitting fitting LMMs (linear mixed-effects models), GLMMs (generalized linear mixed models) and NLMMs
+- package for fitting LMMs (linear mixed-effects models), GLMMs (generalized linear mixed models) and NLMMs
 - widely used models, often applied to very large data sets
 - must update, not copy, model structures when iterating to parameter estimates
     - can use environments, reference classes, etc.
