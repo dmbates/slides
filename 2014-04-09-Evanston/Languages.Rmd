@@ -200,7 +200,7 @@ julia> sum(samp .<= 29)/length(samp)
 
 ```{.julia}
 julia> sampsums(v::Vector,k,N) = 
-          [sum(sample(treats,10;replace=false)) for i in 1:N]
+          [sum(sample(v,k;replace=false)) for i in 1:N]
 sampsums (generic function with 1 method)
 
 julia> srand(1234321)
@@ -220,7 +220,7 @@ julia> countnz(samp .<= 29)/length(samp)
 ```{.julia}
 julia> function sampsums(v::Vector,k,N)
            a = similar(v,k)
-           [sum(StatsBase.sample!(treats,a;replace=false))
+           [sum(StatsBase.sample!(v,a;replace=false))
                for i in 1:N]
        end
 sampsums (generic function with 1 method)
@@ -239,7 +239,7 @@ elapsed time: 0.139770793 seconds (30400224 bytes allocated)
 
 ## Enumerating all possible subsets
 ```{.julia}
-julia> enumsums(v::Vector,k) = [sum(c) for c in combinations(v,10)]
+julia> enumsums(v::Vector,k) = [sum(c) for c in combinations(v,k)]
 enumsums (generic function with 1 method)
 
 julia> esums = enumsums(treats,10);
