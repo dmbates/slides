@@ -87,7 +87,7 @@ using DataFrames,MixedModels
 inst = DataFrame(read_rda("./data/InstEval.rda")["InstEval"]);
 fm1 = fit(lmm(y ~ dept*service + (1|s) + (1|d), inst))  # next slide
 @time fit(lmm(y ~ dept*service + (1|s) + (1|d), inst));
- # elapsed time: 7.170804855 seconds (211949256 bytes allocated)
+ # elapsed time: 5.50303199 seconds (214254588 bytes allocated)
 ```
 
 - In `Julia` the `using` directive attaches a package.
@@ -95,7 +95,7 @@ fm1 = fit(lmm(y ~ dept*service + (1|s) + (1|d), inst))  # next slide
 - The default criterion for the `lmm` function in the `MixedModels` package is ML.
 - The entire `MixedModels` package is written in `Julia`
 - Libraries of compiled code such as `OpenBLAS`, `LAPACK` and `SuiteSparse` are used but they are part of the base system.
-
+- More details are given in the [Insteval.ipynb](http://nbviewer.ipython.org/github/dmbates/slides/blob/master/2014-04-09-Evanston/InstEval.ipynb) notebook
 
 ## Results of model fit
 ```
@@ -140,3 +140,44 @@ Linear mixed model fit by maximum likelihood
 [27]   -0.516997 0.0809077  -6.38997
 [28]   -0.384773  0.091843  -4.18946
 ```
+
+# Computational methods
+
+## Use of a relative covariance factor
+
+- In general the $q\times q$ covariance matrix, $\mathbf{\Sigma}$, depends upon a small number of parameters - 2 in this case
+- Because $\mathbf{\Sigma}$ is a covariance matrix it must be positive semi-definite.  
+- We write $\mathbf{\Sigma}$ using its _relative Cholesky factor_, $\mathbf{\Lambda}_{\mathbf{\theta}}$, $$ \mathbf{\Sigma}=\sigma^2\mathbf{\Lambda}_{\mathbf{\theta}}\mathbf{\Lambda}_{\mathbf{\theta}}'$$ and write $\mathcal{B}$ as $$\mathcal{B}=\mathbf{\Lambda}_{\mathbf{\theta}}\mathcal{U}$$ where the unconditional distribution of $\mathcal{U}$ is $$\mathcal{U}\sim\mathcal{N}(\mathbf{0},\sigma^2\mathbf{I})$$
+
+## Joint density of $\mathcal{Y}$ and $\mathcal{U}$
+
+- $$f_{\mathcal{U},\mathcal{Y}}(\mathbf{u},\mathbf{y})=\frac{1}{\left(2\pi\sigma^2\right)^{(n+q)/2}} \exp\left(\frac{||\mathbf{y-X\beta-Z\Lambda_\theta u}||^2+ ||\mathbf{u}||^2}{-2\sigma^2}\right)$$
+- We can determine the _conditional mean_, $\tilde{\mathbf{u}}=\mathbb{E}(\mathcal{U}|\mathcal{Y}=\mathbf{y})$, as the solution to the penalized least squares problem
+$$\tilde{\mathbf{u}}=\arg\min_{\mathbf{u}}||\mathbf{y-X\beta-Z\Lambda_\theta u}||^2+||\mathbf{u}||^2$$
+for which the _normal equations_ are
+$$\left(\mathbf{\Lambda'Z'Z\Lambda+I}\right)\tilde{\mathbf{u}}=\mathbf{\Lambda'Z'\left(\mathbf{y-X\beta}\right)}$$
+
+## The sparse Cholesky factor
+
+- To solve the normal equations we create the _sparse Cholesky factor_ $$\mathbf{LL'=P\left(\Lambda'Z'Z\Lambda+I\right)P'}$$ where $\mathbf{L}$ is a $q\times q$ sparse lower triangular matrix and $\mathbf{P}$ represents a _fill-reducing permutation_.
+- $\mathbf{P}$ doesn't affect the theory but is important in practice.
+- Most sparse Cholesky software allows for the determination of $\mathbf{P}$, part of the _symbolic phase_, to be performed separately from the _numeric phase_ in which the numerical values in $\mathbf{L}$ are evaluated.
+- We must repeat the numeric phase for each evaluation of the objective but the symbolic phase need only be done once.
+- Notice that even when $\mathbf{Z'Z}$ or $\mathbf{\Lambda}_{\mathbf{\theta}}$ are rank deficient, the matrix to be decomposed is of full rank.
+- Tim Davis's [CHOLMOD](http://www.cise.ufl.edu/research/sparse/cholmod/), which allows a _supernodal_ decomposition (a sparse/dense hybrid), is used in `R` and `Julia`.
+
+## "Profiling out" $\mathbf{\beta}$ and $\sigma^2$
+
+- If we extend the penalized least squares problem to $$\arg\min_{\mathbf{u},\mathbf{\beta}}||\mathbf{y-X\beta-Z\Lambda_\theta u}||^2+||\mathbf{u}||^2$$ with normal equations $$\begin{bmatrix}\mathbf{\Lambda_\theta'Z'Z\Lambda_\theta+I} & \mathbf{X'Z\Lambda_\theta}\\ \mathbf{\Lambda_\theta'Z'X}&\mathbf{X'X}\end{bmatrix}\begin{bmatrix}\mathbf{\tilde{u}}\\ \mathbf{\hat{\beta}_\theta}\end{bmatrix}=\begin{bmatrix}\mathbf{\Lambda_\theta'Z'y}\\ \mathbf{X'y}\end{bmatrix}$$ to obtain the _conditional mle_, $\mathbf{\hat{\beta}_\theta}$.
+- Solving this system is straightforward once $\mathbf{P}$ and $\mathbf{L_\theta}$ are determined.
+- Similarly, the conditional mle, $\widehat{\sigma^2}_\theta$, can be evaluated as the minimum penalized residual sum-of-squares (PRSS), $r^2_\theta$, divided by $n$
+
+## The profiled log-likelihood
+
+- We can now express the _profiled_ log-likelihood, $\ell(\mathbf{\theta|y})$, on the deviance scale (negative twice the log-likelihood), as $$-2\ell(\mathbf{\theta|y})=\log\left(|\mathbf{L_\theta}|^2\right)+n\left[1+\log\left(\frac{2\pi r^2_\theta}{n}\right)\right]$$
+- The parameter estimates, $\mathbf{\hat{\theta}}$, minimize the deviance.
+- The other parameter estimates, $\mathbf{\hat{\beta}}$ and $\widehat{\sigma^2}$, are evaluated at $\hat{\mathbf{\theta}}$
+- When minimizing $-2\ell(\mathbf{\theta|y})$ for each evaluation we must
+    - Update $\mathbf\Lambda_\theta$ and $\mathbf{L_\theta}$
+    - Solve the penalized least squares problem to obtain $r^2_{\mathbf{\theta}}$
+- Most of the execution time is spent in updating $\mathbf{L_\theta}$ and a few matrices related to $\mathbf{X}$.
