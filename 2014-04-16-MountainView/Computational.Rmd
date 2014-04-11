@@ -53,7 +53,8 @@ $$ \mathcal{B}\sim\mathcal{N}(\mathbf{0},\sigma^2_b\mathbf{I}),\quad \mathcal{Y}
     - `f` is a linear model expression
     - `g` is an expression for a `factor`, called the *grouping factor*
     
-- The overall covariance matrix for the random effects is block-diagonal with a block for each term.
+- $\mathbf{\Sigma}$, the covariance matrix for the random effects, is block-diagonal with a block for each term.
+    - i.e. in the unconditional distribution, $\mathcal{B}\sim\mathcal{N}(\mathbf{0},\mathbf{\Sigma})$, random effects from different terms are independent
 
 - The model matrix $\mathbf{Z}$ is the horizontal concatenation of blocks for each term.
 
@@ -61,7 +62,7 @@ $$ \mathcal{B}\sim\mathcal{N}(\mathbf{0},\sigma^2_b\mathbf{I}),\quad \mathcal{Y}
 
 - A *simple, scalar* random-effects term is of the form `(1|g)`.  
 - There is one random effect for each level of `g`.  Let $i_g$ be the number of levels.
-- Its diagonal block in $\mathbf{\Sigma}$, the random effects covariance matrix, is $\sigma^2_g\mathbf{I}_{i_g}$.
+- Its diagonal block in $\mathbf{\Sigma}$ is $\sigma^2_g\mathbf{I}_{i_g}$.
 - Its vertical block in $\mathbf{Z}$ is the $n\times i_g$ indicator matrix for the levels of `g`.
 
 ## The `InstEval` data from ETH-Zurich {.build}
