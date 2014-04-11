@@ -1,3 +1,6 @@
 .Rproj.user
 .Rhistory
 .RData
+.ipynb_checkpoints/
+*/*.html
+*/*_cache/
