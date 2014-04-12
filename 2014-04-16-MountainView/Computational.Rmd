@@ -33,9 +33,10 @@ $$\mathcal{Y}\sim\mathcal{Pois}(\exp(\mathbf{X\beta})) .$$
 - When the levels of the covariate, (e.g. `item`) are a sample from a population of potential values we model the *random effects* as being from a *distribution*.
 
 - The simplest case of a linear model with random effects is
-$$ \mathcal{B}\sim\mathcal{N}(\mathbf{0},\sigma^2_b\mathbf{I}),\quad \mathcal{Y}|\mathcal{B}=\mathbf{b}\sim\mathcal{N}(\mathbf{X}\mathbf{\beta}+\mathbf{Z}\mathbf{b},\sigma^2\mathbf I)$$
+$$ \mathcal{B}\sim\mathcal{N}(\mathbf{0},\sigma^2_b\mathbf{I}_q),\quad \mathcal{Y}|\mathcal{B}=\mathbf{b}\sim\mathcal{N}(\mathbf{X}\mathbf{\beta}+\mathbf{Z}\mathbf{b},\sigma^2\mathbf{I}_n)$$
+where $\mathbf{X}$ ($n\times p$) and $\mathbf{Z}$ ($n\times q$) are _model matrices_. 
 
-- Here the *random-effects model matrix*, $\mathbf{Z}$, is the *indicator matrix* of the levels of the covariate.  In general the linear predictor for the conditional distribution $\mathcal{Y}|\mathcal{B}=\mathbf{b}$ becomes $\mathbf{X\beta+Z b}$ (e.g. $\mathcal{Y}|\mathcal{B}=\mathbf{b}\sim\mathcal{Pois}(\exp(\mathbf{X\beta+Z b}))$).
+- In this case, $\mathbf{Z}$ is the *indicator matrix* of the levels of the covariate.  In general the linear predictor for the conditional distribution $\mathcal{Y}|\mathcal{B}=\mathbf{b}$ becomes $\mathbf{X\beta+Z b}$ (e.g. $\mathcal{Y}|\mathcal{B}=\mathbf{b}\sim\mathcal{Pois}(\exp(\mathbf{X\beta+Z b}))$).
 
 - A **mixed-effects model** has both fixed-effects, $\mathbf{\beta}$, and random effects, $\mathcal{B}$.
 
@@ -104,8 +105,10 @@ Linear mixed model fit by maximum likelihood
 
  Variance components:
                 Variance    Std.Dev.
+### <b>
  s              0.105418    0.324681
  d              0.258416    0.508347
+### </b>
  Residual       1.384728    1.176745
  Number of obs: 73421; levels of grouping factors: 2972, 1128
 
@@ -145,13 +148,13 @@ Linear mixed model fit by maximum likelihood
 
 ## Use of a relative covariance factor
 
-- In general the $q\times q$ covariance matrix, $\mathbf{\Sigma}$, depends upon a small number of parameters - 2 in this case
+- The $q\times q$ covariance matrix, $\mathbf{\Sigma}$, depends upon a small number of parameters, 2 in this case.
 - Because $\mathbf{\Sigma}$ is a covariance matrix it must be positive semi-definite.  
 - We write $\mathbf{\Sigma}$ using its _relative Cholesky factor_, $\mathbf{\Lambda}_{\mathbf{\theta}}$, $$ \mathbf{\Sigma}=\sigma^2\mathbf{\Lambda}_{\mathbf{\theta}}\mathbf{\Lambda}_{\mathbf{\theta}}'$$ and write $\mathcal{B}$ as $$\mathcal{B}=\mathbf{\Lambda}_{\mathbf{\theta}}\mathcal{U}$$ where the unconditional distribution of $\mathcal{U}$ is $$\mathcal{U}\sim\mathcal{N}(\mathbf{0},\sigma^2\mathbf{I})$$
 
 ## Joint density of $\mathcal{Y}$ and $\mathcal{U}$
 
-- $$f_{\mathcal{U},\mathcal{Y}}(\mathbf{u},\mathbf{y})=\frac{1}{\left(2\pi\sigma^2\right)^{(n+q)/2}} \exp\left(\frac{||\mathbf{y-X\beta-Z\Lambda_\theta u}||^2+ ||\mathbf{u}||^2}{-2\sigma^2}\right)$$
+$$f_{\mathcal{U},\mathcal{Y}}(\mathbf{u},\mathbf{y})=\frac{1}{\left(2\pi\sigma^2\right)^{(n+q)/2}} \exp\left(\frac{||\mathbf{y-X\beta-Z\Lambda_\theta u}||^2+ ||\mathbf{u}||^2}{-2\sigma^2}\right)$$
 - We can determine the _conditional mean_, $\tilde{\mathbf{u}}=\mathbb{E}(\mathcal{U}|\mathcal{Y}=\mathbf{y})$, as the solution to the penalized least squares problem
 $$\tilde{\mathbf{u}}=\arg\min_{\mathbf{u}}||\mathbf{y-X\beta-Z\Lambda_\theta u}||^2+||\mathbf{u}||^2$$
 for which the _normal equations_ are
@@ -180,4 +183,83 @@ $$\left(\mathbf{\Lambda'Z'Z\Lambda+I}\right)\tilde{\mathbf{u}}=\mathbf{\Lambda'Z
 - When minimizing $-2\ell(\mathbf{\theta|y})$ for each evaluation we must
     - Update $\mathbf\Lambda_\theta$ and $\mathbf{L_\theta}$
     - Solve the penalized least squares problem to obtain $r^2_{\mathbf{\theta}}$
-- Most of the execution time is spent in updating $\mathbf{L_\theta}$ and a few matrices related to $\mathbf{X}$.
+
+## Where is the time spent?
+
+- If we profile (in the computer science sense) the model fit (see the [IJulia notebook](http://nbviewer.ipython.org/github/dmbates/slides/2014-04-09-Evanston/InstEval.html)), the important results are
+```
+  6621 ....3/NLopt/src/NLopt.jl; nlopt_callback_wrapper; line: 387
+    6620 ...linearmixedmodels.jl; obj; line: 13
+     2321 ...dels/src/scalarn.jl; solve!; line: 72
+        1934 linalg/cholmod.jl; solve; line: 943
+         1791 linalg/cholmod.jl; solve; line: 793
+     3261 ...dels/src/scalarn.jl; theta!; line: 108
+      3235 linalg/cholmod.jl; cholfact!; line: 669
+```
+
+-  half the time for the evaluation of the objective function is spent updating the sparse Cholesky factor (`linalg/cholmod.jl; cholfact!`)
+- over 1/4 of the time is spent in solving a sparse system of equations using this decomposition (`linalg/cholmod.jl; solve`)
+
+# Fitting GLMMs
+
+## Integral of scaled conditional density
+
+- For GLMMs or LMMs the log-likelihood depends on the density of $\mathcal{U}|\mathcal{Y}=\mathbf{y}$
+- We know this density up to a scale factor but the likelihood **is** the scale factor
+- For LMMs the conditional density is Gaussian so all we need is the height at the mode ($r^2_\theta$) and the Hessian at the mode (related to $\mathbf{L_\theta L_\theta'}$).  Recall $$-2\ell(\mathbf{\theta|y})=\log\left(|\mathbf{L_\theta}|^2\right)+n\left[1+\log\left(\frac{2\pi r^2_\theta}{n}\right)\right]$$.
+- For GLMMs we do not have a closed-form expression for the integral of the unscaled density.
+- The high-dimensional integral can be expressed as a product of low-dimensional integrals in certain cases.
+- In the interesting cases (multiple, partially-crossed grouping factors) it can't
+- The only saving grace is that the integrand shape is like a multivariate Gaussian density.
+
+## The Laplace approximation
+
+- For fixed $\mathbf{\theta}$ and $\mathbf{\beta}$ determine the _conditional mode_, $\tilde{\mathbf u}(\mathbf{\theta,\beta})$, and the Hessian factor, $\mathbf{L_{\theta,\beta}}$
+- We use _Penalized Iteratively Reweighted Least Squares_ (PIRLS) to do this.
+- That is
+    - solve a weighted penalized least squares (WPLS) problem for $\mathbf{\delta_u}$
+    - increment $\mathbf{u}$, evaluate $\mathbf{\eta}$, $\mathbf{\mu}$ and the variance
+    - update the weights and iterate
+- At $\tilde{\mathbf u}$, evaluate $\mathbf{L_{\theta,\beta}}$, the GLM deviance and the penalty, $||\tilde{\mathbf u}||^2$.
+- Strictly speaking we can't profile out $\mathbf{\beta}$ and it must be incorporated in the nonlinear optimizer.
+- It can be worthwhile approximating further by using PIRLS to jointly optimize $\tilde{\mathbf u}$ and $\hat{\mathbf\beta}$
+    - This doesn't seem to be as big a win as we hoped it would be
+
+# Fitting GLMMs at "Google scale"
+
+## Faster sparse Cholesky factorization
+
+- At this point I think working on anything other than the sparse Choleksy update and solutions will not help much
+    - In our experience a supernodal decomposition can help a lot
+    - Latest versions of CHOLMOD (part of [Suitesparse](http://www.cise.ufl.edu/research/sparse/SuiteSparse/)) use CUBLAS for GPU support
+        - Configuring and working with CHOLMOD is already difficult
+        - Adding CUBLAS may be the straw that broke the camel's back
+    - There are parallel sparse Cholesky implementations
+        - I don't have much experience with these
+        - [PETSc](http://www.mcs.anl.gov/petsc/) provides interfaces to [PaStiX](http://pastix.gforge.inria.fr) and to [MUMPS](http://mumps.enseeiht.fr/)
+        - Tim Davis has a [list](https://www.cise.ufl.edu/research/sparse/codes/) linking to several packages
+
+
+# Other avenues of research
+
+## Evaluating gradients and Hessians
+
+- For an LMM it is possible to evaluate the gradient and Hessian of $-2\ell(\mathbf{\theta|y})$ and hence use more sophisticated optimization techniques.
+- That's the good news.
+- The bad news is that, except in simple cases, a gradient evaluation is much more expensive than many evaluations of the objective.
+- This is because the derivative of $|\mathbf{\Lambda_\theta'Z'Z\Lambda_\theta+I}|$ with respect to elements of $\mathbf{\theta}$ essentially requires evaluating $\left(\mathbf{\Lambda_\theta'Z'Z\Lambda_\theta+I}\right)^{-1}$
+- At least I haven't found a way of evaluating the gradient without the moral equivalent of evaluating the inverse.
+
+# Summary
+
+## Implementations in _lme4_ and in _MixedModels_
+
+- Important concepts
+    - relative covariance factor, $\mathbf{\Lambda_\theta}$, where $\mathbf{\Sigma}=\sigma^2\mathbf{\Lambda_\theta\Lambda_\theta'}$
+    - linear predictor $\mathbf{\eta}=\mathbf{X\beta+Z\Lambda_\theta u}$
+    - sparse Cholesky factor, $\mathbf{L}$, where $\mathbf{LL'=P}\left(\mathbf{\Lambda_\theta'Z'Z\Lambda_\theta+I}\right)\mathbf{P}'$
+- For LMMs optimize the _profiled deviance_, $$-2\ell(\mathbf{\theta|y})=\log\left(|\mathbf{L_\theta}|^2\right)+n\left[1+\log\left(\frac{2\pi r^2_\theta}{n}\right)\right]$$
+
+- For GLMMs the PLS problem becomes PIRLS and we use the Laplace approximation.
+    - optimization problem is more difficult (both $\mathbf{\theta}$ and $\mathbf\beta$)
+    - objective function evaluation is iterative, hence optimizing a stochastic function evaluation
