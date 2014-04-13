@@ -18,7 +18,7 @@ options(show.signif.stars=FALSE)
 
 ## Linear predictors and *effects*
 
-- In statistics, a *linear model* relates a *response* random variable, $\mathcal{Y}$, to observed *covariates* through a *linear predictor*, $\mathbf{X}\mathbf{\beta}$, where $\mathbf{X}$ is a *model matrix*.
+- In statistics, a *linear model* relates a *response* random variable, $\mathcal{Y}$, to observed *covariates* through a *linear predictor*, $\mathbf{\eta}=\mathbf{X}\mathbf{\beta}$, where $\mathbf{X}$ is an $n\times p$ *model matrix*.
 $$ \mathcal{Y}\sim\mathcal{N}(\mathbf X\mathbf\beta,\sigma^2\mathbf I) $$
 
 - In a *generalized linear model* (GLM) the mean response is a transformation, called the *link function*, of the linear predictor. For example,
@@ -26,18 +26,21 @@ $$\mathcal{Y}\sim\mathcal{Pois}(\exp(\mathbf{X\beta})) .$$
 
 - A categorical covariate (e.g. `sex` or `item`) with $k$ levels generates $k-1$ columns in $\mathbf X$.  The corresponding elements of $\mathbf\beta$ are sometimes called the *effects* of the covariate.
 
-- If the number of levels of the covariate is small and reproducible we use *fixed-effects* coefficients.
+- If the number of levels of the covariate is small and reproducible the effects are *fixed-effects* coefficients, i.e. some elements of $\mathbf{\beta}$.
 
 ## Random effects
 
-- When the levels of the covariate, (e.g. `item`) are a sample from a population of potential values we model the *random effects* as being from a *distribution*.
+- When the levels of the covariate, (e.g. `item`), are a sample from a population, the distribution of the *random effects* random variable, $\mathcal{B}$, is typically modeled as $\mathcal{B}\sim\mathcal{N}(\mathbf{0,\Sigma})$.
 
-- The simplest case of a linear model with random effects is
-$$ \mathcal{B}\sim\mathcal{N}(\mathbf{0},\sigma^2_b\mathbf{I}_q),\quad \mathcal{Y}|\mathcal{B}=\mathbf{b}\sim\mathcal{N}(\mathbf{X}\mathbf{\beta}+\mathbf{Z}\mathbf{b},\sigma^2\mathbf{I}_n)$$
-where $\mathbf{X}$ ($n\times p$) and $\mathbf{Z}$ ($n\times q$) are _model matrices_. 
+- A simple, "one-way" random effects model is $\mathcal{B}\sim\mathcal{N}(\mathbf{0},\sigma^2_b\mathbf{I}_q)$, $\mathcal{Y}|\mathcal{B}=\mathbf{b}\sim\mathcal{N}(\mathbf{X}\mathbf{\beta}+\mathbf{Z}\mathbf{b},\sigma^2\mathbf{I}_n)$ 
+    - $\mathbf{Z}$ is the $n\times q$ *indicator matrix* of the levels of the covariate.
+    - the parameters are $\mathbf{\beta}$, $\sigma^2_b$ and $\sigma^2$
+    - technically, the optimal $\mathbf{b}$ is not a parameter.  We call it the *conditional mode* of the random effects
 
-- In this case, $\mathbf{Z}$ is the *indicator matrix* of the levels of the covariate.  In general the linear predictor for the conditional distribution $\mathcal{Y}|\mathcal{B}=\mathbf{b}$ becomes $\mathbf{X\beta+Z b}$ (e.g. $\mathcal{Y}|\mathcal{B}=\mathbf{b}\sim\mathcal{Pois}(\exp(\mathbf{X\beta+Z b}))$).
+- For generalized linear mixed models (GLMMs) we have $\mathbf{\eta}=\mathbf{X\beta+Z b}$ in $\mathcal{Y}|\mathcal{B}=\mathbf{b}$
+    - e.g. $\mathcal{Y}|\mathcal{B}=\mathbf{b}\sim\mathcal{Pois}(\exp(\mathbf{X\beta+Z b}))$.
 
+## Mixed-effects 
 - A **mixed-effects model** has both fixed-effects, $\mathbf{\beta}$, and random effects, $\mathcal{B}$.
 
 - Notice that:
@@ -96,7 +99,7 @@ fm1 = fit(lmm(y ~ dept*service + (1|s) + (1|d), inst))  # next slide
 - The default criterion for the `lmm` function in the `MixedModels` package is ML.
 - The entire `MixedModels` package is written in `Julia`
 - Libraries of compiled code such as `OpenBLAS`, `LAPACK` and `SuiteSparse` are used but they are part of the base system.
-- More details are given in the [Insteval.ipynb](http://nbviewer.ipython.org/github/dmbates/slides/blob/master/2014-04-09-Evanston/InstEval.ipynb) notebook
+- More details are given in the [InstEval.ipynb](http://nbviewer.ipython.org/github/dmbates/slides/blob/master/2014-04-09-Evanston/InstEval.ipynb) `IJulia` notebook
 
 ## Results of model fit
 ```
@@ -155,10 +158,8 @@ Linear mixed model fit by maximum likelihood
 ## Joint density of $\mathcal{Y}$ and $\mathcal{U}$
 
 $$f_{\mathcal{U},\mathcal{Y}}(\mathbf{u},\mathbf{y})=\frac{1}{\left(2\pi\sigma^2\right)^{(n+q)/2}} \exp\left(\frac{||\mathbf{y-X\beta-Z\Lambda_\theta u}||^2+ ||\mathbf{u}||^2}{-2\sigma^2}\right)$$
-- We can determine the _conditional mean_, $\tilde{\mathbf{u}}=\mathbb{E}(\mathcal{U}|\mathcal{Y}=\mathbf{y})$, as the solution to the penalized least squares problem
-$$\tilde{\mathbf{u}}=\arg\min_{\mathbf{u}}||\mathbf{y-X\beta-Z\Lambda_\theta u}||^2+||\mathbf{u}||^2$$
-for which the _normal equations_ are
-$$\left(\mathbf{\Lambda'Z'Z\Lambda+I}\right)\tilde{\mathbf{u}}=\mathbf{\Lambda'Z'\left(\mathbf{y-X\beta}\right)}$$
+
+- We can determine the _conditional mean_, $\tilde{\mathbf{u}}_\theta=\mathbb{E}(\mathcal{U}|\mathcal{Y}=\mathbf{y})$, as the solution to the penalized least squares problem (PLS) $$\tilde{\mathbf{u}}=\arg\min_{\mathbf{u}}||\mathbf{y-X\beta-Z\Lambda_\theta u}||^2+||\mathbf{u}||^2$$ for which the _normal equations_ are $$\left(\mathbf{\Lambda'Z'Z\Lambda+I}\right)\tilde{\mathbf{u}}_\theta=\mathbf{\Lambda'Z'\left(\mathbf{y-X\beta}\right)}$$
 
 ## The sparse Cholesky factor
 
@@ -171,16 +172,16 @@ $$\left(\mathbf{\Lambda'Z'Z\Lambda+I}\right)\tilde{\mathbf{u}}=\mathbf{\Lambda'Z
 
 ## "Profiling out" $\mathbf{\beta}$ and $\sigma^2$
 
-- If we extend the penalized least squares problem to $$\arg\min_{\mathbf{u},\mathbf{\beta}}||\mathbf{y-X\beta-Z\Lambda_\theta u}||^2+||\mathbf{u}||^2$$ with normal equations $$\begin{bmatrix}\mathbf{\Lambda_\theta'Z'Z\Lambda_\theta+I} & \mathbf{X'Z\Lambda_\theta}\\ \mathbf{\Lambda_\theta'Z'X}&\mathbf{X'X}\end{bmatrix}\begin{bmatrix}\mathbf{\tilde{u}}\\ \mathbf{\hat{\beta}_\theta}\end{bmatrix}=\begin{bmatrix}\mathbf{\Lambda_\theta'Z'y}\\ \mathbf{X'y}\end{bmatrix}$$ to obtain the _conditional mle_, $\mathbf{\hat{\beta}_\theta}$.
+- We obtain the _conditional mle_, $\mathbf{\hat{\beta}_\theta}$, by extending the PLS problem to $$\tilde{\mathbf u}_\theta, \hat{\mathbf\beta}_\theta =\arg\min_{\mathbf{u},\mathbf{\beta}}||\mathbf{y-X\beta-Z\Lambda_\theta u}||^2+||\mathbf{u}||^2$$ with normal equations $$\begin{bmatrix}\mathbf{\Lambda_\theta'Z'Z\Lambda_\theta+I} & \mathbf{X'Z\Lambda_\theta}\\ \mathbf{\Lambda_\theta'Z'X}&\mathbf{X'X}\end{bmatrix}\begin{bmatrix}\tilde{\mathbf u}_\theta\\ \mathbf{\hat{\beta}_\theta}\end{bmatrix}=\begin{bmatrix}\mathbf{\Lambda_\theta'Z'y}\\ \mathbf{X'y}\end{bmatrix}$$ 
 - Solving this system is straightforward once $\mathbf{P}$ and $\mathbf{L_\theta}$ are determined.
 - Similarly, the conditional mle, $\widehat{\sigma^2}_\theta$, can be evaluated as the minimum penalized residual sum-of-squares (PRSS), $r^2_\theta$, divided by $n$
 
 ## The profiled log-likelihood
 
 - We can now express the _profiled_ log-likelihood, $\ell(\mathbf{\theta|y})$, on the deviance scale (negative twice the log-likelihood), as $$-2\ell(\mathbf{\theta|y})=\log\left(|\mathbf{L_\theta}|^2\right)+n\left[1+\log\left(\frac{2\pi r^2_\theta}{n}\right)\right]$$
-- The parameter estimates, $\mathbf{\hat{\theta}}$, minimize the deviance.
+- The parameter estimates, $\mathbf{\hat{\theta}}$, minimize the profiled deviance.
 - The other parameter estimates, $\mathbf{\hat{\beta}}$ and $\widehat{\sigma^2}$, are evaluated at $\hat{\mathbf{\theta}}$
-- When minimizing $-2\ell(\mathbf{\theta|y})$ for each evaluation we must
+- When minimizing $-2\ell(\mathbf{\theta|y})$, at each objective function evaluation we must
     - Update $\mathbf\Lambda_\theta$ and $\mathbf{L_\theta}$
     - Solve the penalized least squares problem to obtain $r^2_{\mathbf{\theta}}$
 
@@ -225,6 +226,31 @@ $$\left(\mathbf{\Lambda'Z'Z\Lambda+I}\right)\tilde{\mathbf{u}}=\mathbf{\Lambda'Z
 - It can be worthwhile approximating further by using PIRLS to jointly optimize $\tilde{\mathbf u}$ and $\hat{\mathbf\beta}$
     - This doesn't seem to be as big a win as we hoped it would be
 
+# Current enhancements in Julia package
+
+## Special cases based on the form of $\mathbf{\Lambda}_\theta$ and $\mathbf{L}$
+
+- With a single r-e term, $\mathbf{\Lambda}$ is repeated block-diagonal ($i_g$ repetitions of the same block) and $\mathbf{L}$ is block-diagonal (diagonal for a single, scalar term).
+    - obvious parallelization and simplification of storage
+- Multiple terms with *nested* grouping factors produces a "fractal" structure
+    - block-diagonal at coarsest level
+    - each inner level is block-diagonal plus a dense row of blocks
+    - $\mathbf{L}$ has the same structure. (i.e. no fill-in)
+    - $\mathbf{P}$ is simply based on a post-ordering
+- Multiple, non-nested scalar terms
+    - $\mathbf{\Lambda}$ is diagonal so pre-compute $\mathbf{Z'Z}$ and use symmetric scaling.
+    - Good for LMMs, doesn't help much for GLMMs (b/c of reweighting)
+    
+## Exploiting indicator structure in $\mathbf{Z}$
+
+- Vertical blocks of $\mathbf{Z}$ are indicator matrices or row-wise multiples of indicators
+- Number of non-zeros per row is constant
+    - store [Compressed Sparse Row](http://en.wikipedia.org/wiki/Sparse_matrix) (CSR) of $\mathbf{Z}$ or CSC of $\mathbf{Z'}$
+- Don't need column-pointers in CSC (row pointers in CSR) b/c of pattern
+- In Julia for the general case store a vector of row block numbers and a dense matrix of nonzeros
+    - Can form $\mathbf{\Lambda_\theta'Z'}$ with dense matrix multiplication
+    - Can also apply weights for $\mathbf{\Lambda_\theta'}\mathbf{Z'}\mathbf{W}\mathbf{Z}\mathbf{\Lambda_\theta}$ ($\mathbf{W}$ is pos-definite diagonal) on the dense matrix.
+
 # Fitting GLMMs at "Google scale"
 
 ## Faster sparse Cholesky factorization
@@ -234,13 +260,21 @@ $$\left(\mathbf{\Lambda'Z'Z\Lambda+I}\right)\tilde{\mathbf{u}}=\mathbf{\Lambda'Z
     - Latest versions of CHOLMOD (part of [Suitesparse](http://www.cise.ufl.edu/research/sparse/SuiteSparse/)) use CUBLAS for GPU support
         - Configuring and working with CHOLMOD is already difficult
         - Adding CUBLAS may be the straw that broke the camel's back
-    - There are parallel sparse Cholesky implementations
+    - [Eigen](http://eigen.tuxfamily.org) provides much cleaner simplicial Cholesky
+        - templated C++ linear algebra package
+        - no native supernodal decomposition at present
+    - Parallel sparse Cholesky implementations
         - I don't have much experience with these
         - [PETSc](http://www.mcs.anl.gov/petsc/) provides interfaces to [PaStiX](http://pastix.gforge.inria.fr) and to [MUMPS](http://mumps.enseeiht.fr/)
         - Tim Davis has a [list](https://www.cise.ufl.edu/research/sparse/codes/) linking to several packages
 
-
 # Other avenues of research
+
+## Iterative solvers
+
+- It may be faster to use distributed iterative solvers to solve the PLS or PIRLS problems
+- That is, avoid the sparse Cholesky factorization
+- I'm not sure how to evaluate $|\mathbf{\Lambda_\theta'Z'Z\Lambda_\theta+I}|$ or the weighted version quickly without forming $\mathbf{L}_\theta$.
 
 ## Evaluating gradients and Hessians
 
