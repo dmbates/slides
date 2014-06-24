@@ -4,12 +4,81 @@ author: "Douglas Bates"
 date: "06/26/2014"
 output: beamer_presentation
 ---
-## Characteristics of Statistical Computing
-- It is widely used. Long ago university mainframes spent most of their CPU time in programs like SPSS, SAS, and BMDP.
-- Hot topics like Bioinformatics, Analytics (whatever that is) and Big Data have spurred even more interest.
-- There is a wide range of abilities, both mathematical and computational, in those who use such software.
-- It is not uncommon for mathphobes in social and life sciences to find themselves taking a required statistics course.
-- Researchers in many disciplines are expected to provide a statistical analysis of their results, which far too often means "a p-value < 5%".
+## Current state of play in Statistical Computing
+- Some older style systems (SAS, SPSS) are still used but primarily because of inertia.
+- R has converted the discipline to Open Source, and to function-based computing in a REPL.
+- The CRAN archive has democratized contributions to statistical software
+    - theses, etc. frequently include production of an R package
+    - good news: reference implementations of methods are available
+    - bad news: some of these implementations are not examples of best practices
+- Design decisions of R (and, before it, S) are exacting a toll.
+    - S was originally an interface language. Good R performance often requires compiled code.
+    - Functional semantics are a mixed blessing.
+
+## Popularity of R is remarkable
+- Estimated to have many millions of users
+- Probably over 10,000 packages in various archives by now.
+- Coursera MOOCs by Roger Peng and others at Johns Hopkins have themselves attracted more than a million enrollees.
+- Used in many commercial settings.
+- Support from RStudio (IDE, reproducible research).  Commercialization at Revolution.
+- Artfully used it can lessen the pain of an intro stats course.
+- Hundreds of books on "<Whatever> with R", web resources, etc.
+- Some elements of its design are very effective
+    - Dataframes, Missing Data, Factors (JMW, next up)
+    - Formula language
+
+## Is Julia the "R of the future"?
+- I am comfortable recommending to those using compute-intensive methods or working with large data sets that they learn Julia
+- Julia provides much greater flexibilty, speed and power than R does or can, without radical changes.
+- Presently Julia is suitable for early adopters and geeks.
+- Most statistical analysis is done by researchers, not statisticians, who are not ready for Julia.
+- Will or should they be ready for Julia and Julia ready for them?
+- Perhaps as Rick said in Casablanca - "Maybe not today, maybe not tomorrow, but some day and for the rest of your life."
+
+# Model representation as a formula
+
+##  A taxonomy of basic statistical models
+- $\bf X$ a model matrix of size $m\times n$ (statisticians write this as $n\times p$; number of observations by number of parameters).  Typically $m > n$.
+- $\bf y$, the $m$-dimensional vector of responses, the realization of the random variable $\mathcal Y$.
+- $\bf\eta=\bf X\bf\beta$, the $m$-dimensional _linear predictor_ depending on the $n$-dimensional _coefficient vector_, $\bf\beta$.
+- For a _linear model_ we assume 
+$$\mathcal Y\sim\mathcal N(\bf X\bf\beta,\sigma^2\bf I_m)$$
+That is, $\mathbb{E}(\mathcal Y)=\bf\mu=\bf\eta$.
+- A _generalized linear model_ (GLM) incorporates a component-wise mapping $\bf g$ called the _link_ function such that $\bf X\beta=\bf\eta=\bf g(\bf\mu)$
+
+## "distinct" techniques are often special cases
+- Linear models encompass
+    - simple linear regression
+    - multiple linear regression
+    - polynomial regression
+    - analysis of variance
+    - t-tests
+- GLMs encompass
+    - logistic regression (Bernoulli distribution and logit link)
+    - Poisson regression (Poisson distribution and log link)
+
+## Analysis and interpretation requires more than $\hat\beta$
+- There is more to fitting such models than just evaluating $\hat\beta$.
+- Model fit diagnostics, measures of precision (confidence intervals) and/or hypothesis tests are part of the analysis.
+- Often groups of coefficients and groups of columns in $\bf X$ have important interpretations.
+- The formula language is a high-level description of a model from which the model matrix, $\bf X$, is derived
+- Post-fit analyses: analysis of variance, analysis of deviance, various other hypothesis tests, $\dots$ use information from the terms in the formula.
+
+## Terms in a formula
+
+- We will write a generic response as `y`, categorical covariates as `f` and `g`, and continuous covariates as `u` and `v`.  An intercept column (column of 1's in $\bf X$) is implicit.
+- Some examples
+```julia
+y ~ u      # simple linear regression, X is m by 2
+y ~ 1 + u  # simple linear reg. w/ explicit intercept
+y ~ 0 + u  # reg. through origin, suppressed intercept
+y ~ 1 + u + v # multiple linear regression
+y ~ f      # one-way analysis of variance
+y ~ f + g  # two-way analysis of variance
+y ~ f + g + f&g # two-way anova with interaction
+y ~ f * g  # expands to y ~ f + g + f&g
+```
+
 
 ## The "there is only one formula" phenomenon
 - Statistics is often taught as rote application of formulas from some text.
