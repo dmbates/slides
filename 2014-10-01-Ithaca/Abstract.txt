@@ -1,0 +1,24 @@
+		    Statistical Computing in Julia
+
+			    Douglas Bates
+		       Department of Statistics
+		  University of Wisconsin - Madison
+
+Julia (www.julialang.org) is a new language for technical computing.
+Those familiar with other such languages often see it as "a faster
+Matlab/Octave, R, Python, ..." because it is based on a Just-In-Time
+(JIT) compiler provided by the LLVM project (www.llvm.org).  It is
+true that Julia code can be quite fast but concentrating only on speed
+of execution for familiar code idioms is missing the point.  Julia is
+a new language design based on generic functions, multiple dispatch, a
+sophisticated type system including user-defined types and templated
+types, and compilation of methods to machine code.  There are
+examples, some of which I contributed, of implementation of the same
+simple algorithm in R and in Julia the purpose of speed comparison.
+In this talk, however, I will describe a much larger project of
+reimplementing the facilities of the lme4 package for R in the
+MixedModels package for Julia.  Although the MixedModels package is
+entirely coded in Julia, whereas the lme4 package does the heavy
+lifting in C++ code using the Eigen numerical linear algebra library,
+the MixedModels package ends up being much more flexible, reliable and
+often much faster.
