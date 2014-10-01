@@ -1,0 +1,146 @@
+---
+title: "Statistical Computing in Julia"
+author: Douglas Bates
+date: October 1, 2014
+output: 
+  ioslides_presentation:
+    incremental: true
+    widescreen: true
+    smaller: true
+---
+## Web sites
+
+- (https://github.com/dmbates/slides), git archive of the slides for this and other talks
+- (http://nbviewer.ipython.org/github/dmbates/slides), view the IJulia files
+- (http://julialang.org), home page for Julia
+- (http://docs.julialang.org/en/release-0.3/) documentation for latest version
+- (https://github.com/dmbates/MixedModels.jl) Distributions package
+
+# The `Julia` language
+
+## Introducing [Julia](http://www.julialang.org)
+
+- A dynamic language for technical computing using [JIT](http://en.wikipedia.org/wiki/Just-in-time_compilation) compilation from [LLVM](http://llvm.org)
+- All functions are generic using [multiple dispatch](http://en.wikipedia.org/wiki/Multiple_dispatch)
+- Wide range of data types
+    - user-defined data types are encouraged
+- Active, amazingly-talented and friendly developer community
+- Leverages current web-centric tools
+    - all development takes place on [github](http://github.com)
+    - issue trackers, discussions and mailing lists are easy to access
+    - a Julia package is a [git](http://en.wikipedia.org/wiki/Git_(software)) repository, usually on [github](http://github.com)
+    - often Julia packages are maintained by special-interest groups like [JuliaStats](http://github.com/JuliaStats) or [JuliaOpt](http://github.com/JuliaOpt)
+- Syntax like that of `R`, `Matlab/Octave`, `JavaScript` but with its own idiosyncracies
+
+## My experiences doing statistical computing in Julia
+
+- the entire [MixedModels](https://github.com/dmbates/MixedModels.jl) package is written in Julia.  Around 1000 lines of code.
+- numerical linear algebra in the base system and various optimization packages are extremely well formulated.
+- can program in an [R](http://www.r-project.org) style (i.e. vectorized code) if you wish.
+- but, you do __not__ need to "fear the loop" if that is more natural.
+- can profile code.  Very good facilities for displaying the results.
+- can have multiple views of the same storage in arrays.
+- can have templated types.
+- mutating functions (change the values of arguments) are allowed.
+- often a substantial amount of the time spent in execution of dynamic functions is in the allocate/garbage collect cycle.
+
+## But you're supposed to vectorize
+
+- Consider evaluating the inverse of the logistic link.  That is `logis` or "log-odds"
+- the vectorized version would be something like
+
+```{.julia}
+julia> logis(μ) = log(μ ./ (1. - μ))
+logis (generic function with 1 method)
+julia> const μ = rand(100_000);
+julia> logis(μ)'
+1x100000 Array{Float64,2}:
+ -0.465002  -0.706308  1.90022  -3.36004  -0.771333  -1.07598  1.48328  0.669307  1.01868  -0.497459  …  -2.86348  0.834771  -1.19765  -2.40293  -2.62063  -0.295474  -1.28992  -1.16575  0.6952
+julia> @time logis(μ);
+elapsed time: 0.008315903 seconds (2414456 bytes allocated)
+```
+- internally, the first evaluation is `1. - mu`.  When `mu` is of length `n` this will allocate a vector of length `n` and loop over this intermediate and `mu` filling this in.
+- next another vector of length `n` is allocated for the result of `mu ./ tmp1`.  (The '.' indicates componentwise division.)
+- another vector of length `n` and one more loop for the call to `log`.  This is the return value.
+
+## Using a comprehension
+
+```{.julia}
+julia> logis(μ) = log(μ ./ (1. - μ))
+logis (generic function with 1 method)
+
+julia> const μ = rand(100_000);
+
+julia> logis(μ)'
+1x100000 Array{Float64,2}:
+ -0.465002  -0.706308  1.90022  -3.36004  -0.771333  -1.07598  1.48328  0.669307  1.01868  -0.497459  …  -2.86348  0.834771  -1.19765  -2.40293  -2.62063  -0.295474  -1.28992  -1.16575  0.6952
+
+julia> @time logis(μ);
+elapsed time: 0.008315903 seconds (2414456 bytes allocated)
+```
+
+- a comprehension is like a `for` loop turned inside out.
+- it generates an array according to the expression applied to individual values from the iterator
+
+## A mutating version
+
+```{.julia}
+julia> function logis!{T <: FloatingPoint}(η::Vector{T},μ::Vector{T})
+           (n = length(η)) == length(μ) || throw(DimensionMismatch(""))
+           for i in 1:n
+               η[i] = log(μ[i] / (one(T) - μ[i]))
+           end
+           η
+       end
+logis! (generic function with 1 method)
+
+julia> η = similar(μ);
+
+julia> logis!(η,μ)'
+1x100000 Array{Float64,2}:
+ -0.465002  -0.706308  1.90022  -3.36004  -0.771333  -1.07598  1.48328  0.669307  1.01868  -0.497459  …  -2.86348  0.834771  -1.19765  -2.40293  -2.62063  -0.295474  -1.28992  -1.16575  0.6952
+
+julia> @time logis!(η,μ);
+elapsed time: 0.014088341 seconds (80 bytes allocated)
+```
+
+# Conclusions
+
+## Good points for Julia
+
+- Speed of compiled code in a REPL-based, dynamic language.
+- Sophisticated type system, many inbuilt types
+- All functions are generic with multiple dispatch
+- Built from the ground up for parallel computing
+     - multiple processes local or remote
+     - distributed arrays, shared arrays for local processes
+- Active developers from machine learning, computer vision, optimization, ...
+- Built on the "best of breed" numerical software
+- Access to many storage formats: XML, JSON, YAML, HDF5
+- Package system build on `git`.
+
+## Drawbacks of using Julia
+
+- Another language and system to learn
+    - It's just close enough to `R`, `Matlab/Octave`, etc. to confuse you
+    - yet another set of function names to learn
+- Still in initial rapid growth phase, 0.3.0 to be released "soon"
+- Probably should learn `git`, which can be frustrating
+- Graphics is still somewhat hit-or-miss
+- Documentation
+    - still no standard for package documentation
+    - even the documentation for base system is sketchy
+    - how-to's, online courses, etc. are rudimentary
+    - no books as yet
+
+## Who should adopt early?
+
+- Those who need to do computationally intensive work on large objects
+    - MCMC and similar sampling-based methods
+    - simulation studies
+    - heavy optimization
+- Sophisticated optimization methods are already available
+    - forward and reverse automatic differentiation for Hamiltonian Monte Carlo (HMC) or NUTS samplers
+    - author of NLopt package wrote the Julia interface
+    - ODE, PDE, etc. solvers are a priority
+- Distributions package, NumericExtensions package
