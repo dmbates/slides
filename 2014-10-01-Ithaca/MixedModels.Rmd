@@ -104,6 +104,26 @@ julia> @time logis!(η,μ);
 elapsed time: 0.014088341 seconds (80 bytes allocated)
 ```
 
+## An enhanced mutating version
+
+```{.julia}
+julia> function logis1!{T <: FloatingPoint}(η::Vector{T},μ::Vector{T})
+           (n = length(η)) == length(μ) || throw(DimensionMismatch(""))
+           @simd for i in 1:n
+               @inbounds η[i] = log(μ[i] / (one(T) - μ[i]))
+           end
+           η
+       end
+logis1! (generic function with 1 method)
+
+julia> logis1!(η,μ)'
+1x100000 Array{Float64,2}:
+ -0.465002  -0.706308  1.90022  -3.36004  -0.771333  -1.07598  1.48328  0.669307  1.01868  -0.497459  …  -2.86348  0.834771  -1.19765  -2.40293  -2.62063  -0.295474  -1.28992  -1.16575  0.6952
+
+julia> @time logis1!(η,μ);
+elapsed time: 0.010218065 seconds (80 bytes allocated)
+```
+
 # Conclusions
 
 ## Good points for Julia
